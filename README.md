@@ -19,4 +19,4 @@ Other detailed options will be seen in the file gan.m.
 ## Reference
 * [1] I. Goodfellow, et al., "Generative adversarial nets," NIPS '14.
 (https://papers.nips.cc/paper/5423-generative-adversarial-nets.pdf)
-* http://web.cse.ohio-state.edu/~wang.77/pnl/software.html
+* [2] http://web.cse.ohio-state.edu/~wang.77/pnl/software.html
