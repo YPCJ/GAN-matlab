@@ -4,6 +4,8 @@ function grad = compute_unit_gradient(net_activation,unit_type)
             grad = net_activation.*(1-net_activation); 
         case 'relu'
             grad = single(net_activation>0);
+        case 'leakyrelu'
+            grad = single(net_activation>0) + 0.1*single(net_activation<0);
         case 'softmax'
         case 'lin'
             grad = 1;
