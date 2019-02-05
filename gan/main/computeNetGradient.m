@@ -1,4 +1,4 @@
-function [cost, GD_gradients, G_fake, D_fake, D_real] = computeNetGradient(net_G, net_D, noise, real, opts, GD)
+function [cost, GD_gradients, G_fake, D_fake, D_real, mu, istd] = computeNetGradient(net_G, net_D, noise, real, opts, GD)
     num_sample = size(noise,1);
 
     num_net_layer_G = length(net_G);
@@ -8,15 +8,18 @@ function [cost, GD_gradients, G_fake, D_fake, D_real] = computeNetGradient(net_G
     unit_type_hidden_G = opts.unit_type_hidden_G;
     unit_type_hidden_D = opts.unit_type_hidden_D;
 
-    [forward_path_G_fake, drop_mask_G_fake, forward_path_G_fake_batch, forward_path_G_fake_istd] = forwardPass(net_G, noise, opts, 'G');
+    [forward_path_G_fake, drop_mask_G_fake, forward_path_G_fake_batch, mu, forward_path_G_fake_istd] = forwardPass(net_G, noise, opts, 'G');
     G_fake = forward_path_G_fake{num_net_layer_G+1}';
-    [forward_path_D_fake, drop_mask_D_fake, forward_path_D_fake_batch, forward_path_D_fake_istd] = forwardPass(net_D, G_fake, opts, 'D');
-    D_fake = forward_path_D_fake{num_net_layer_D+1}';
 
-    D_real=[];
+    D_real = [];
     if strcmp(GD,'D')
-        [forward_path_D_real, drop_mask_D_real, forward_path_D_real_batch, forward_path_D_real_istd] = forwardPass(net_D, real, opts ,'D');
+        [forward_path_D, drop_mask_D, forward_path_D_batch, mu, forward_path_D_istd] = forwardPass(net_D, [real;G_fake], opts ,'D');
+        [forward_path_D_real, forward_path_D_fake] = real_fake(forward_path_D);
         D_real = forward_path_D_real{num_net_layer_D+1}';
+        D_fake = forward_path_D_fake{num_net_layer_D+1}';
+        
+        [drop_mask_D_real, drop_mask_D_fake] = real_fake(drop_mask_D);
+        [forward_path_D_real_batch, forward_path_D_fake_batch] = real_fake(forward_path_D_batch);
         
         switch opts.cost_function
             case 'gan'
@@ -34,6 +37,8 @@ function [cost, GD_gradients, G_fake, D_fake, D_real] = computeNetGradient(net_G
                 output_delta_fake = +(D_fake - opts.lsgan_b).*compute_unit_gradient(D_fake,unit_type_output_D);
         end
     else
+        [forward_path_D_fake, drop_mask_D_fake, forward_path_D_fake_batch, ~, forward_path_D_fake_istd] = forwardPass(net_D, G_fake, opts, 'D');
+        D_fake = forward_path_D_fake{num_net_layer_D+1}';
         switch opts.cost_function
             case 'gan'
                 cost = -mean(log(D_fake));
@@ -51,23 +56,23 @@ function [cost, GD_gradients, G_fake, D_fake, D_real] = computeNetGradient(net_G
     if strcmp(GD,'D')
         acf = struct('real',forward_path_D_real,'fake',forward_path_D_fake);
         x_hat = struct('real',forward_path_D_real_batch,'fake',forward_path_D_fake_batch);
-        x_istd = struct('real',forward_path_D_real_istd,'fake',forward_path_D_fake_istd);
+        x_istd = forward_path_D_istd;
         
         dmask = struct('real',drop_mask_D_real,'fake',drop_mask_D_fake);
         fns = fieldnames(acf);
         
-        net_gradients_D = zeroInitNet(opts.net_struct_D,opts.isGPU);
+        net_gradients_D = zeroInitNet(opts.net_struct_D, opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_D);
         GD_gradients = struct('real',net_gradients_D,'fake',net_gradients_D);
         GD_output_deltas = struct('real',output_delta_real,'fake',output_delta_fake);
     else
         acf = struct('fake',forward_path_D_fake);
         x_hat = struct('fake',forward_path_D_fake_batch);
-        x_istd = struct('fake',forward_path_D_fake_istd);
+        x_istd = forward_path_D_fake_istd;
         
         dmask = struct('fake',drop_mask_D_fake);
         fns = fieldnames(acf);
         
-        net_gradients_G = zeroInitNet(opts.net_struct_G,opts.isGPU);
+        net_gradients_G = zeroInitNet(opts.net_struct_G,opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_D);
         GD_gradients = struct('fake',net_gradients_G);
         GD_output_deltas = struct('fake',output_delta_fake);
     end
@@ -80,9 +85,8 @@ function [cost, GD_gradients, G_fake, D_fake, D_real] = computeNetGradient(net_G
         upper_layer_delta = GD_output_deltas.(fns{k}); % upper layer delta doesn't need {};
         
         h = {x_hat.(fns{k})};
-        istd = {x_istd.(fns{k})};
+        istd = x_istd;
         for ll = num_net_layer_D: -1: 1
-            % Batch normalization backpass.
             if opts.batchNormlization && opts.batchNorm_D(ll) == 1
                 [upper_layer_delta, net_gradients_D(ll).gamma, net_gradients_D(ll).beta] =  batchNorm_backpass(h{ll}, istd{ll}, upper_layer_delta, net(ll).gamma);
             end
