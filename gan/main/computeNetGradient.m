@@ -72,7 +72,7 @@ function [cost, GD_gradients, G_fake, D_fake, D_real, mu, istd] = computeNetGrad
         dmask = struct('fake',drop_mask_D_fake);
         fns = fieldnames(acf);
         
-        net_gradients_G = zeroInitNet(opts.net_struct_G,opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_D);
+        net_gradients_G = zeroInitNet(opts.net_struct_G,opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_G);
         GD_gradients = struct('fake',net_gradients_G);
         GD_output_deltas = struct('fake',output_delta_fake);
     end
