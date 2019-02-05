@@ -14,8 +14,8 @@ opts.isPretrain         = 0;            % Pretraining opt. (0 new model, 2 previ
 opts.checker            = 10;           % During training, plot generated images for checker batch
 opts.batch_size         = 128;
 opts.max_epoch          = 100;
-opts.learner            = 'adam';       % 'adam', 'rms', 'ada_grad', 'agd' optimizer 
-opts.learner_scale      = 0.0002;       % Scale for optimizer
+opts.learner            = 'ams';        % 'ams', 'adam', 'ada_delta', 'rms', 'ada_grad', 'agd' optimizer 
+opts.learner_scale      = 0.0001;       % Scale for optimizer
 opts.save_model_path    = 'model/';     % model path to store the every epoch model
 opts.initial            = 'he';         % initialization method 'xavier','he','random'
 opt_config                              % etc option. (layer, units, cost function, ...)
