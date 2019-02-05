@@ -7,6 +7,8 @@ switch unit_type
         net_activation = net_potential;
     case 'relu'
         net_activation = relu(net_potential);
+    case 'leakyrelu'
+        net_activation = leakyrelu(net_potential);
     case 'tanh'
         net_activation = tanh(net_potential);
     case 'softmax'
@@ -14,4 +16,3 @@ switch unit_type
     otherwise
         error(['unknown activation function:' unit_type])
 end
-
