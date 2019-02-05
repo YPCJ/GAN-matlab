@@ -1,4 +1,4 @@
-function net = randInitNet(net_struct, isSparse, isL2Norm, isGPU, initMethod, batch)
+function net = randInitNet(net_struct, isSparse, isL2Norm, isGPU, initMethod, batch, batchNorm)
 
 num_net_layer = length(net_struct) - 1;
 net = repmat(struct,num_net_layer,1);
@@ -19,9 +19,16 @@ for i = 1:num_net_layer
     net(i).W = single(net(i).W);
     net(i).b = single(net(i).b);
     
-    if batch == 1
-        net(i).gamma = ones(net_struct(i+1),1);
-        net(i).beta = zeros(net_struct(i+1),1);
+    if batch == 1 && batchNorm(i)
+        net(i).gamma = ones(net_struct(i+1),1,'single');
+        net(i).beta = zeros(net_struct(i+1),1,'single');
+        net(i).mu = zeros(net_struct(i+1),1,'single');
+        net(i).istd = zeros(net_struct(i+1),1,'single');
+    elseif batch == 1
+            net(i).gamma = [];
+            net(i).beta = [];
+            net(i).mu = [];
+            net(i).istd = [];
     end 
     
     if isGPU
@@ -31,6 +38,8 @@ for i = 1:num_net_layer
         if batch == 1
             net(i).gamma = gpuArray(net(i).gamma);
             net(i).beta = gpuArray(net(i).beta);
+            net(i).mu = gpuArray(net(i).mu);
+            net(i).istd = gpuArray(net(i).istd);
         end 
     end
 end

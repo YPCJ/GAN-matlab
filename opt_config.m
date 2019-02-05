@@ -18,14 +18,14 @@ if strcmp(opts.cost_function,'lsgan')
     opts.lsgan_c = 1;
 end
 
-opts.hid_struct_D = [128 128];
-opts.hid_struct_G = [128 128];
+opts.hid_struct_D = [128 ];
+opts.hid_struct_G = [128 ];
 opts.net_struct_G = [size(noise,2), opts.hid_struct_G, size(real, 2)];
 opts.net_struct_D = [opts.net_struct_G(end), opts.hid_struct_D, 1];
 
 opts.batchNormlization = 0;
-opts.batchNorm_G = [1 1 1 0];
-opts.batchNorm_D = [0 1 1 0];
+opts.batchNorm_G = [1 0];
+opts.batchNorm_D = [0 0];
 
 opts.unit_type_output_D = 'sigm';
 opts.unit_type_output_G = 'lin';

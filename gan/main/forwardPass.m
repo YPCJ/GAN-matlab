@@ -1,4 +1,4 @@
-function [forward_path, drop_mask, forward_path_batchNorm, forward_path_batchNorm_istd]= forwardPass(net,data,opts,GD)
+function [forward_path, drop_mask, forward_path_batchNorm, forward_path_batchNorm_mu, forward_path_batchNorm_istd]= forwardPass(net,data,opts,GD)
 
 if strcmp(GD, 'D')
     unit_type_output = opts.unit_type_output_D;
@@ -14,6 +14,7 @@ num_data_layer = num_net_layer+1; % count input layer in
 
 forward_path = cell(num_data_layer,1);
 forward_path_batchNorm = cell(num_net_layer,1);
+forward_path_batchNorm_mu = cell(num_net_layer,1);
 forward_path_batchNorm_istd = cell(num_net_layer,1);
 drop_mask = cell(num_data_layer,1);
 
@@ -33,7 +34,7 @@ for ii = 1:num_data_layer
         net_potential = bsxfun(@plus, drop_scale*net(ii-1).W*net_activation, net(ii-1).b);
         % Batch Normalization
         if opts.batchNormlization && batchNorm(ii-1) == 1
-            [net_potential, forward_path_batchNorm{ii-1}, forward_path_batchNorm_istd{ii-1}]= batchNorm_forward(net_potential, net(ii-1).gamma, net(ii-1).beta);
+            [net_potential, forward_path_batchNorm{ii-1}, forward_path_batchNorm_mu{ii-1}, forward_path_batchNorm_istd{ii-1}]= batchNorm_forward(net_potential, net(ii-1).gamma, net(ii-1).beta);
         end
         if ii == num_data_layer
             net_activation = compute_unit_activation(net_potential,unit_type_output);

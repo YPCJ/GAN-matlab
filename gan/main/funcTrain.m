@@ -18,8 +18,8 @@ switch opts.isPretrain
     case 0
         disp('Weight initialization.')
         isSparse = 0; isNorm = 1;
-        pre_net_D = randInitNet(net_struct_D, isSparse, isNorm, isGPU, opts.initial, opts.batchNormlization);
-        pre_net_G = randInitNet(net_struct_G, isSparse, isNorm, isGPU, opts.initial, opts.batchNormlization);
+        pre_net_D = randInitNet(net_struct_D, isSparse, isNorm, isGPU, opts.initial, opts.batchNormlization, opts.batchNorm_D);
+        pre_net_G = randInitNet(net_struct_G, isSparse, isNorm, isGPU, opts.initial, opts.batchNormlization, opts.batchNorm_G);
     case 2
         load([opts.save_model_path 'resume_param.mat']);
         disp([opts.save_model_path 'resume_param.mat loaded.'])
@@ -31,6 +31,9 @@ switch opts.isPretrain
 end
 
 disp(['isGPU : ' num2str(isGPU) ' / ' opts.cost_function ' / ' opts.learner '(' num2str(opts.learner_scale) ') / Batch Normalization : ' num2str(opts.batchNormlization)])
+if strcmp(opts.learner,'ada_delta')
+    disp('note: Learnering scale of the optimizer ''ada_delta'' is meaningless.')
+end
 
 net_iterative_D = pre_net_D;
 net_iterative_G = pre_net_G;
@@ -39,14 +42,11 @@ batch_id = genBatchID(num_samples,opts.batch_size);
 num_batch = size(batch_id,2);
 
 if start_epoch == 1
-    net_weights_inc_D = zeroInitNet(net_struct_D, opts.isGPU);
-    net_weights_inc_G = zeroInitNet(net_struct_G, opts.isGPU);
+    net_weights_inc_D = zeroInitNet(net_struct_D, opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_D);
+    net_weights_inc_G = zeroInitNet(net_struct_G, opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_G);
     
-    net_grad_ssqr_D = zeroInitNet(net_struct_D, opts.isGPU, eps);
-    net_grad_ssqr_G = zeroInitNet(net_struct_G, opts.isGPU, eps);
-    
-    net_grad_ssqr_D = struct('W',{net_grad_ssqr_D.W},'b', {net_grad_ssqr_D.b});
-    net_grad_ssqr_G = struct('W',{net_grad_ssqr_G.W},'b', {net_grad_ssqr_G.b});
+    net_grad_ssqr_D = zeroInitNet(net_struct_D, opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_D);
+    net_grad_ssqr_G = zeroInitNet(net_struct_G, opts.isGPU, 0, opts.batchNormlization, opts.batchNorm_G);
     
     if strcmp(opts.learner, 'adam') || strcmp(opts.learner, 'ada_delta')
         [net_grad_ssqr_D(:).W2] = deal(net_grad_ssqr_D.W); [net_grad_ssqr_D(:).b2] = deal(net_grad_ssqr_D.b);
@@ -58,18 +58,14 @@ if start_epoch == 1
         [net_grad_ssqr_G(:).W3] = deal(net_grad_ssqr_G.W); [net_grad_ssqr_G(:).b3] = deal(net_grad_ssqr_G.b);
     end
     if opts.batchNormlization == 1
-        [net_grad_ssqr_D(:).gamma] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta]  = deal(net_grad_ssqr_D.b);
-        [net_grad_ssqr_G(:).gamma] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta]  = deal(net_grad_ssqr_G.b);
-        [net_weights_inc_D(:).gamma] = deal(net_weights_inc_D.b); [net_weights_inc_D(:).beta]  = deal(net_weights_inc_D.b);
-        [net_weights_inc_G(:).gamma] = deal(net_weights_inc_G.b); [net_weights_inc_G(:).beta]  = deal(net_weights_inc_G.b);
         if strcmp(opts.learner, 'adam') || strcmp(opts.learner, 'ada_delta')
-            [net_grad_ssqr_D(:).gamma2] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta2]  = deal(net_grad_ssqr_D.b);
-            [net_grad_ssqr_G(:).gamma2] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta2]  = deal(net_grad_ssqr_G.b);
+            [net_grad_ssqr_D(:).gamma2] = deal(net_grad_ssqr_D.gamma); [net_grad_ssqr_D(:).beta2]  = deal(net_grad_ssqr_D.beta);
+            [net_grad_ssqr_G(:).gamma2] = deal(net_grad_ssqr_G.gamma); [net_grad_ssqr_G(:).beta2]  = deal(net_grad_ssqr_G.beta);
         elseif strcmp(opts.learner, 'ams')
-            [net_grad_ssqr_D(:).gamma2] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta2]  = deal(net_grad_ssqr_D.b);
-            [net_grad_ssqr_G(:).gamma2] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta2]  = deal(net_grad_ssqr_G.b);
-            [net_grad_ssqr_D(:).gamma3] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta3]  = deal(net_grad_ssqr_D.b);
-            [net_grad_ssqr_G(:).gamma3] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta3]  = deal(net_grad_ssqr_G.b);
+            [net_grad_ssqr_D(:).gamma2] = deal(net_grad_ssqr_D.gamma); [net_grad_ssqr_D(:).beta2]  = deal(net_grad_ssqr_D.beta);
+            [net_grad_ssqr_G(:).gamma2] = deal(net_grad_ssqr_G.gamma); [net_grad_ssqr_G(:).beta2]  = deal(net_grad_ssqr_G.beta);
+            [net_grad_ssqr_D(:).gamma3] = deal(net_grad_ssqr_D.gamma); [net_grad_ssqr_D(:).beta3]  = deal(net_grad_ssqr_D.beta);
+            [net_grad_ssqr_G(:).gamma3] = deal(net_grad_ssqr_G.gamma); [net_grad_ssqr_G(:).beta3]  = deal(net_grad_ssqr_G.beta);
         end
     end
 end
@@ -78,6 +74,7 @@ for epoch = start_epoch:opts.max_epoch
     tic
     seq = randperm(num_samples);
     cost_sum_G = 0; cost_sum_D = 0;
+    
     for bid = 1:num_batch
         perm_idx = seq(batch_id(1,bid):batch_id(2,bid));
         
@@ -95,7 +92,7 @@ for epoch = start_epoch:opts.max_epoch
             momentum=opts.initial_momentum;
         end
         
-        [cost_D, net_grad_D, ~, ~, D_real] = computeNetGradient(net_iterative_G, net_iterative_D, batch_data(1:end/2,:), batch_label, opts, 'D');
+        [cost_D, net_grad_D, ~, ~, D_real, mu_tmp1, istd_tmp1] = computeNetGradient(net_iterative_G, net_iterative_D, batch_data(1:end/2,:), batch_label, opts, 'D');
         net_grad_D_sum = net_grad_D.real;
         for ll = 1:length(net_grad_D.real)
             net_grad_D_sum(ll).W = net_grad_D.real(ll).W + net_grad_D.fake(ll).W;
@@ -108,9 +105,13 @@ for epoch = start_epoch:opts.max_epoch
         end
         [net_iterative_D, net_weights_inc_D, net_grad_ssqr_D] = learner(net_iterative_D, momentum, net_weights_inc_D, net_grad_ssqr_D, net_grad_D_sum, opts, epoch, bid, num_batch, 'D');
         
-        [cost_G,net_grad_G, G_fake, D_fake, ~] = computeNetGradient(net_iterative_G, net_iterative_D, batch_data(end/2+1:end,:), batch_label, opts, 'G');
+        [cost_G, net_grad_G, G_fake, D_fake, ~, mu_tmp2, istd_tmp2] = computeNetGradient(net_iterative_G, net_iterative_D, batch_data(end/2+1:end,:), batch_label, opts, 'G');
         [net_iterative_G, net_weights_inc_G, net_grad_ssqr_G] = learner(net_iterative_G, momentum, net_weights_inc_G, net_grad_ssqr_G,     net_grad_G, opts, epoch, bid, num_batch, 'G');
         
+        if opts.batchNormlization == 1
+            net_iterative_D = avgRecur(net_iterative_D, mu_tmp1, istd_tmp1, 0.5, opts, 'D');
+        	net_iterative_G = avgRecur(net_iterative_G, mu_tmp2, istd_tmp2, 0.5, opts, 'G');
+        end
         if rem(bid, opts.checker) == 0
             figure(1), clf('reset'); 
 
