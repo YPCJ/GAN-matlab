@@ -48,18 +48,28 @@ if start_epoch == 1
     net_grad_ssqr_D = struct('W',{net_grad_ssqr_D.W},'b', {net_grad_ssqr_D.b});
     net_grad_ssqr_G = struct('W',{net_grad_ssqr_G.W},'b', {net_grad_ssqr_G.b});
     
-    if strcmp(opts.learner, 'adam')
+    if strcmp(opts.learner, 'adam') || strcmp(opts.learner, 'ada_delta')
         [net_grad_ssqr_D(:).W2] = deal(net_grad_ssqr_D.W); [net_grad_ssqr_D(:).b2] = deal(net_grad_ssqr_D.b);
         [net_grad_ssqr_G(:).W2] = deal(net_grad_ssqr_G.W); [net_grad_ssqr_G(:).b2] = deal(net_grad_ssqr_G.b);
+    elseif strcmp(opts.learner, 'ams')
+        [net_grad_ssqr_D(:).W2] = deal(net_grad_ssqr_D.W); [net_grad_ssqr_D(:).b2] = deal(net_grad_ssqr_D.b);
+        [net_grad_ssqr_G(:).W2] = deal(net_grad_ssqr_G.W); [net_grad_ssqr_G(:).b2] = deal(net_grad_ssqr_G.b);
+        [net_grad_ssqr_D(:).W3] = deal(net_grad_ssqr_D.W); [net_grad_ssqr_D(:).b3] = deal(net_grad_ssqr_D.b);
+        [net_grad_ssqr_G(:).W3] = deal(net_grad_ssqr_G.W); [net_grad_ssqr_G(:).b3] = deal(net_grad_ssqr_G.b);
     end
     if opts.batchNormlization == 1
         [net_grad_ssqr_D(:).gamma] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta]  = deal(net_grad_ssqr_D.b);
         [net_grad_ssqr_G(:).gamma] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta]  = deal(net_grad_ssqr_G.b);
         [net_weights_inc_D(:).gamma] = deal(net_weights_inc_D.b); [net_weights_inc_D(:).beta]  = deal(net_weights_inc_D.b);
         [net_weights_inc_G(:).gamma] = deal(net_weights_inc_G.b); [net_weights_inc_G(:).beta]  = deal(net_weights_inc_G.b);
-        if strcmp(opts.learner, 'adam')
+        if strcmp(opts.learner, 'adam') || strcmp(opts.learner, 'ada_delta')
             [net_grad_ssqr_D(:).gamma2] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta2]  = deal(net_grad_ssqr_D.b);
             [net_grad_ssqr_G(:).gamma2] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta2]  = deal(net_grad_ssqr_G.b);
+        elseif strcmp(opts.learner, 'ams')
+            [net_grad_ssqr_D(:).gamma2] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta2]  = deal(net_grad_ssqr_D.b);
+            [net_grad_ssqr_G(:).gamma2] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta2]  = deal(net_grad_ssqr_G.b);
+            [net_grad_ssqr_D(:).gamma3] = deal(net_grad_ssqr_D.b); [net_grad_ssqr_D(:).beta3]  = deal(net_grad_ssqr_D.b);
+            [net_grad_ssqr_G(:).gamma3] = deal(net_grad_ssqr_G.b); [net_grad_ssqr_G(:).beta3]  = deal(net_grad_ssqr_G.b);
         end
     end
 end
