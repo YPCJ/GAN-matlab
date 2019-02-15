@@ -16,7 +16,10 @@ for ii = 1:num_data_layer
         net_activation = data';
     else
         net_potential = bsxfun(@plus, drop_scale*net(ii-1).W*net_activation, net(ii-1).b);
-%         net_potential = bsxfun(@plus, (1-drop_ratio)*net(ii-1).W*net_activation, net(ii-1).b);
+
+				if opts.batchNormlization && opts.batchNorm(ii-1) == 1
+            net_potential= batchNorm_forward(net_potential, net(ii-1).gamma, net(ii-1).beta, net(ii-1).mu, net(ii-1).istd);
+        end
 
         if ii == num_data_layer
             net_activation = compute_unit_activation(net_potential, opts.unit_type_output);
